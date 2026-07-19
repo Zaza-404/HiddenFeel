@@ -1,248 +1,616 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
-const fs = require('fs-extra');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'hiddenfeel_secret_key';
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
+// ============ MIDDLEWARE ============
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static('frontend'));
 
-// Path data file
-const DATA_DIR = path.join(__dirname, 'database');
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use('/api', limiter);
+
+// ============ DATABASE FUNCTIONS ============
+const DATA_DIR = path.join(__dirname, 'backend', 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ENTRIES_FILE = path.join(DATA_DIR, 'entries.json');
 
-// Pastikan folder database ada
-fs.ensureDirSync(DATA_DIR);
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
-// Load data
-function loadEntries() {
+// Initialize data files
+if (!fs.existsSync(USERS_FILE)) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+}
+if (!fs.existsSync(ENTRIES_FILE)) {
+    fs.writeFileSync(ENTRIES_FILE, JSON.stringify([]));
+}
+
+function readJSON(file) {
     try {
-        if (fs.existsSync(ENTRIES_FILE)) {
-            return fs.readJsonSync(ENTRIES_FILE);
-        }
-        return [];
+        const data = fs.readFileSync(file, 'utf8');
+        return JSON.parse(data) || [];
     } catch (error) {
-        console.error('Error loading entries:', error);
+        console.error('Error reading file:', file, error);
         return [];
     }
 }
 
-// Save data
-function saveEntries(entries) {
+function writeJSON(file, data) {
     try {
-        fs.writeJsonSync(ENTRIES_FILE, entries, { spaces: 2 });
+        fs.writeFileSync(file, JSON.stringify(data, null, 2));
         return true;
     } catch (error) {
-        console.error('Error saving entries:', error);
+        console.error('Error writing file:', file, error);
         return false;
     }
 }
 
+function getNextId(data) {
+    if (!data || data.length === 0) return 1;
+    const ids = data.map(item => item.id).filter(id => typeof id === 'number');
+    return ids.length > 0 ? Math.max(...ids) + 1 : 1;
+}
+
+// ============ AUTH FUNCTIONS ============
+function generateToken(userId) {
+    return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+function verifyToken(token) {
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        return decoded.userId;
+    } catch (error) {
+        return null;
+    }
+}
+
+function getUserById(userId) {
+    const users = readJSON(USERS_FILE);
+    return users.find(u => u.id === userId);
+}
+
+function getUserByEmail(email) {
+    const users = readJSON(USERS_FILE);
+    return users.find(u => u.email.toLowerCase() === email.toLowerCase());
+}
+
+function getEntriesByUser(userId) {
+    const entries = readJSON(ENTRIES_FILE);
+    return entries.filter(e => e.user_id === userId);
+}
+
+// ============ AUTH MIDDLEWARE ============
+function authMiddleware(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ error: 'Unauthorized - No token provided' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const userId = verifyToken(token);
+    
+    if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized - Invalid token' });
+    }
+
+    const user = getUserById(userId);
+    if (!user) {
+        return res.status(401).json({ error: 'Unauthorized - User not found' });
+    }
+
+    req.userId = userId;
+    req.user = user;
+    next();
+}
+
 // ============ API ROUTES ============
 
-// Get all entries
-app.get('/api/entries', (req, res) => {
-    const entries = loadEntries();
-    res.json({ success: true, data: entries });
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
+    });
 });
 
-// Get single entry by date
-app.get('/api/entries/:date', (req, res) => {
-    const entries = loadEntries();
-    const entry = entries.find(e => e.date === req.params.date);
-    res.json({ success: true, data: entry || null });
-});
+// Register
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
 
-// Save/update entry
-app.post('/api/entries', (req, res) => {
-    const entries = loadEntries();
-    const newEntry = req.body;
-    const index = entries.findIndex(e => e.date === newEntry.date);
-    
-    if (index !== -1) {
-        entries[index] = { ...newEntry, updatedAt: new Date().toISOString() };
-    } else {
-        entries.push({ ...newEntry, createdAt: new Date().toISOString() });
+        // Validasi
+        if (!name || !email || !password) {
+            return res.status(400).json({ 
+                error: 'Semua field harus diisi',
+                fields: { name: !!name, email: !!email, password: !!password }
+            });
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Email tidak valid' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password minimal 6 karakter' });
+        }
+
+        // Cek email duplikat
+        if (getUserByEmail(email)) {
+            return res.status(409).json({ error: 'Email sudah terdaftar' });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Simpan user
+        const users = readJSON(USERS_FILE);
+        const newUser = {
+            id: getNextId(users),
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            created_at: new Date().toISOString()
+        };
+
+        users.push(newUser);
+        writeJSON(USERS_FILE, users);
+
+        // Generate token
+        const token = generateToken(newUser.id);
+
+        res.json({
+            success: true,
+            user: {
+                id: newUser.id,
+                name: newUser.name,
+                email: newUser.email,
+                created_at: newUser.created_at
+            },
+            token
+        });
+    } catch (error) {
+        console.error('Register error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    
-    if (saveEntries(entries)) {
-        res.json({ success: true, message: 'Entry saved', data: entries });
-    } else {
-        res.status(500).json({ success: false, message: 'Failed to save' });
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email dan password harus diisi' });
+        }
+
+        const user = getUserByEmail(email);
+        if (!user) {
+            return res.status(401).json({ error: 'Email atau password salah' });
+        }
+
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Email atau password salah' });
+        }
+
+        const token = generateToken(user.id);
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                created_at: user.created_at
+            },
+            token
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get current user
+app.get('/api/auth/me', authMiddleware, (req, res) => {
+    res.json({
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        created_at: req.user.created_at
+    });
+});
+
+// Update user
+app.put('/api/auth/me', authMiddleware, async (req, res) => {
+    try {
+        const { name, password } = req.body;
+        const users = readJSON(USERS_FILE);
+        const userIndex = users.findIndex(u => u.id === req.userId);
+
+        if (userIndex === -1) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (name) {
+            users[userIndex].name = name.trim();
+        }
+
+        if (password && password.length >= 6) {
+            users[userIndex].password = await bcrypt.hash(password, 10);
+        }
+
+        writeJSON(USERS_FILE, users);
+
+        res.json({
+            success: true,
+            user: {
+                id: users[userIndex].id,
+                name: users[userIndex].name,
+                email: users[userIndex].email
+            }
+        });
+    } catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ============ ENTRIES ROUTES ============
+
+// Get all entries
+app.get('/api/entries', authMiddleware, (req, res) => {
+    try {
+        const entries = getEntriesByUser(req.userId);
+        // Sort by newest first
+        entries.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        res.json(entries);
+    } catch (error) {
+        console.error('Get entries error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Create entry
+app.post('/api/entries', authMiddleware, (req, res) => {
+    try {
+        const { mood, feeling_text, note } = req.body;
+
+        if (!feeling_text || feeling_text.trim().length < 3) {
+            return res.status(400).json({ error: 'Perasaan terlalu pendek (min 3 karakter)' });
+        }
+
+        if (feeling_text.length > 1000) {
+            return res.status(400).json({ error: 'Perasaan terlalu panjang (max 1000 karakter)' });
+        }
+
+        // Simple sentiment analysis
+        const sentimentScore = analyzeSentiment(feeling_text);
+
+        const entries = readJSON(ENTRIES_FILE);
+        const newEntry = {
+            id: getNextId(entries),
+            user_id: req.userId,
+            mood: mood || '😊',
+            feeling_text: feeling_text.trim(),
+            note: note || '',
+            sentiment_score: sentimentScore,
+            created_at: new Date().toISOString()
+        };
+
+        entries.push(newEntry);
+        writeJSON(ENTRIES_FILE, entries);
+
+        res.json({
+            success: true,
+            entry: newEntry
+        });
+    } catch (error) {
+        console.error('Create entry error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update entry
+app.put('/api/entries/:id', authMiddleware, (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { mood, feeling_text, note } = req.body;
+
+        const entries = readJSON(ENTRIES_FILE);
+        const entryIndex = entries.findIndex(e => e.id === id && e.user_id === req.userId);
+
+        if (entryIndex === -1) {
+            return res.status(404).json({ error: 'Entry not found' });
+        }
+
+        if (feeling_text && feeling_text.trim().length >= 3) {
+            entries[entryIndex].feeling_text = feeling_text.trim();
+            entries[entryIndex].sentiment_score = analyzeSentiment(feeling_text);
+        }
+
+        if (mood) entries[entryIndex].mood = mood;
+        if (note !== undefined) entries[entryIndex].note = note;
+        entries[entryIndex].updated_at = new Date().toISOString();
+
+        writeJSON(ENTRIES_FILE, entries);
+
+        res.json({
+            success: true,
+            entry: entries[entryIndex]
+        });
+    } catch (error) {
+        console.error('Update entry error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 // Delete entry
-app.delete('/api/entries/:date', (req, res) => {
-    let entries = loadEntries();
-    const filtered = entries.filter(e => e.date !== req.params.date);
-    
-    if (saveEntries(filtered)) {
-        res.json({ success: true, message: 'Entry deleted' });
-    } else {
-        res.status(500).json({ success: false, message: 'Failed to delete' });
-    }
-});
-
-// AI Insight - Daily
-app.post('/api/ai/daily', async (req, res) => {
-    const { entry, recentEntries } = req.body;
-    
-    const prompt = `Kamu adalah teman emosional yang hangat dan penuh empati. Seorang pengguna baru saja mencatat mood mereka.
-
-Mood hari ini: ${entry.moodEmoji} ${entry.moodName} (intensitas: ${entry.intensity || 3}/5)
-Energi: ${entry.energy || "tidak dicatat"}
-Trigger: ${entry.triggers?.join(", ") || "tidak ada"}
-Catatan: "${entry.note || "tidak ada"}"
-Mood 7 hari terakhir: ${recentEntries?.map(e => `${e.moodEmoji} ${e.moodName}`).join(", ") || "tidak ada"}
-
-Berikan respons hangat singkat (2-3 kalimat) dalam bahasa Indonesia yang:
-1. Mengakui perasaan mereka dengan empati
-2. Satu insight kecil tentang pola yang kamu lihat (jika ada)
-3. Satu kata semangat atau tips kecil
-
-Jangan gunakan bullet point. Tulis seperti teman bicara langsung.`;
-
+app.delete('/api/entries/:id', authMiddleware, (req, res) => {
     try {
-        const response = await callClaudeAPI(prompt, 200);
-        res.json({ success: true, insight: response });
+        const id = parseInt(req.params.id);
+        let entries = readJSON(ENTRIES_FILE);
+
+        const found = entries.find(e => e.id === id && e.user_id === req.userId);
+        if (!found) {
+            return res.status(404).json({ error: 'Entry not found' });
+        }
+
+        entries = entries.filter(e => e.id !== id);
+        writeJSON(ENTRIES_FILE, entries);
+
+        res.json({ success: true });
     } catch (error) {
-        console.error('AI Error:', error);
-        res.json({ 
-            success: false, 
-            insight: "Terima kasih sudah meluangkan waktu untuk mencatat hari ini. Ini langkah kecil yang berarti! 💚" 
-        });
+        console.error('Delete entry error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// AI Insight - Weekly
-app.post('/api/ai/weekly', async (req, res) => {
-    const { entries } = req.body;
-    
-    const summary = entries.map(e => 
-        `${e.date}: ${e.moodEmoji} ${e.moodName} (${e.moodVal}/5), trigger: ${e.triggers?.join(", ") || "—"}, catatan: "${e.note || "—"}"`
-    ).join("\n");
+// ============ STATS ROUTES ============
 
-    const prompt = `Kamu adalah psikolog virtual yang penuh empati. Analisa pola emosi pengguna selama 7 hari ini:
-
-${summary}
-
-Berikan analisa dalam bahasa Indonesia yang:
-1. Pola emosi yang kamu lihat
-2. Trigger yang paling berpengaruh  
-3. Satu rekomendasi konkret untuk minggu depan
-
-Format: 3 paragraf pendek, tulis seperti profesional tapi hangat. Tidak perlu heading.`;
-
+app.get('/api/stats', authMiddleware, (req, res) => {
     try {
-        const response = await callClaudeAPI(prompt, 400);
-        res.json({ success: true, insight: response });
+        const entries = getEntriesByUser(req.userId);
+        const total = entries.length;
+
+        // Average sentiment
+        let avgSentiment = 0;
+        if (total > 0) {
+            const sum = entries.reduce((acc, e) => acc + e.sentiment_score, 0);
+            avgSentiment = sum / total;
+        }
+
+        // Mood distribution
+        const moodCount = {};
+        entries.forEach(e => {
+            moodCount[e.mood] = (moodCount[e.mood] || 0) + 1;
+        });
+
+        // Most common mood
+        let mostCommonMood = null;
+        let maxCount = 0;
+        for (const [mood, count] of Object.entries(moodCount)) {
+            if (count > maxCount) {
+                maxCount = count;
+                mostCommonMood = mood;
+            }
+        }
+
+        // Daily stats (last 30 days)
+        const dailyStats = {};
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            dailyStats[dateStr] = 0;
+        }
+
+        entries.forEach(e => {
+            const dateStr = e.created_at.split('T')[0];
+            if (dailyStats[dateStr] !== undefined) {
+                dailyStats[dateStr]++;
+            }
+        });
+
+        const dailyData = Object.entries(dailyStats).map(([date, count]) => ({
+            date,
+            count
+        }));
+
+        // Week stats
+        const weekStats = [0, 0, 0, 0, 0, 0, 0];
+        entries.forEach(e => {
+            const day = new Date(e.created_at).getDay();
+            weekStats[day]++;
+        });
+
+        // Streak
+        let streak = 0;
+        if (total > 0) {
+            const sortedEntries = [...entries].sort((a, b) => 
+                new Date(b.created_at) - new Date(a.created_at)
+            );
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const lastEntryDate = new Date(sortedEntries[0].created_at);
+            lastEntryDate.setHours(0, 0, 0, 0);
+            
+            const diffDays = Math.floor((today - lastEntryDate) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                streak = 1;
+                let checkDate = new Date(today);
+                checkDate.setDate(checkDate.getDate() - 1);
+                
+                const entryDates = new Set();
+                entries.forEach(e => {
+                    const date = new Date(e.created_at);
+                    date.setHours(0, 0, 0, 0);
+                    entryDates.add(date.getTime());
+                });
+                
+                while (entryDates.has(checkDate.getTime())) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                }
+            }
+        }
+
+        res.json({
+            total,
+            avg_sentiment: parseFloat(avgSentiment.toFixed(2)),
+            mood_count: moodCount,
+            most_common_mood: mostCommonMood,
+            daily_stats: dailyData,
+            week_stats: weekStats,
+            streak
+        });
     } catch (error) {
-        console.error('AI Error:', error);
-        res.json({ success: false, insight: "Tidak bisa membuat analisa saat ini. Coba lagi nanti." });
+        console.error('Get stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// AI - Quote
-app.post('/api/ai/quote', async (req, res) => {
-    const { moodContext } = req.body;
-    const moodCtx = moodContext ? `tentang ${moodContext.toLowerCase()} atau cara menghadapinya` : "tentang kesehatan mental atau ketenangan";
+// ============ AI ROUTES ============
 
-    const prompt = `Berikan SATU kutipan inspiratif dalam bahasa Indonesia ${moodCtx}. 
-Format:
-KUTIPAN: [teks kutipan]
-PENULIS: [nama penulis]
-
-Hanya berikan kutipan dan nama penulis, tidak ada teks lain.`;
-
+app.post('/api/ai/analyze', authMiddleware, (req, res) => {
     try {
-        const response = await callClaudeAPI(prompt, 150);
-        const lines = response.split("\n");
-        const quoteLine = lines.find(l => l.startsWith("KUTIPAN:"))?.replace("KUTIPAN:", "").trim() || response;
-        const authorLine = lines.find(l => l.startsWith("PENULIS:"))?.replace("PENULIS:", "").trim() || "";
-        
-        res.json({ 
-            success: true, 
-            quote: quoteLine,
-            author: authorLine || "HiddenFeel"
+        const { text } = req.body;
+
+        if (!text || text.trim().length < 3) {
+            return res.status(400).json({ error: 'Text terlalu pendek' });
+        }
+
+        const score = analyzeSentiment(text);
+        const label = getSentimentLabel(score);
+        const keywords = extractKeywords(text);
+
+        res.json({
+            sentiment_score: score,
+            label: label.label,
+            emoji: label.emoji,
+            keywords: keywords,
+            word_count: text.split(/\s+/).length,
+            confidence: 0.7 + (Math.random() * 0.25)
         });
     } catch (error) {
-        res.json({ 
-            success: false, 
-            quote: "Setiap hari adalah kesempatan baru untuk menjadi versi terbaik dirimu.",
-            author: "HiddenFeel"
-        });
+        console.error('AI analyze error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// AI - Daily Tip
-app.post('/api/ai/tip', async (req, res) => {
-    const { avgMood, topTrigger } = req.body;
-    
-    const prompt = `Pengguna memiliki rata-rata mood ${avgMood}/5 dan trigger terbanyak adalah "${topTrigger}".
-Berikan 1 saran praktis singkat (1-2 kalimat) untuk meningkatkan wellbeing mereka besok. Bahasa Indonesia, hangat dan konkret.`;
+// ============ HELPER FUNCTIONS ============
 
-    try {
-        const response = await callClaudeAPI(prompt, 120);
-        res.json({ success: true, tip: response });
-    } catch (error) {
-        res.json({ 
-            success: false, 
-            tip: "Coba luangkan 5 menit besok pagi untuk menarik napas dalam dan mensyukuri tiga hal kecil." 
-        });
-    }
-});
+function analyzeSentiment(text) {
+    const positiveWords = [
+        'senang', 'bahagia', 'cinta', 'suka', 'tenang', 'syukur', 'bersyukur', 
+        'gembira', 'ceria', 'semangat', 'bangga', 'puas', 'baik', 'indah',
+        'happy', 'love', 'good', 'great', 'amazing', 'wonderful', 'fantastic'
+    ];
+    
+    const negativeWords = [
+        'sedih', 'marah', 'kecewa', 'benci', 'takut', 'stress', 'kesal',
+        'minder', 'cemas', 'khawatir', 'gagal', 'buruk', 'kesepian',
+        'sad', 'angry', 'hate', 'fear', 'anxious', 'worried', 'depressed'
+    ];
 
-// Function to call Claude API
-async function callClaudeAPI(prompt, maxTokens) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    
-    if (!apiKey || apiKey === 'your_anthropic_api_key_here') {
-        console.warn('No valid API key, returning fallback response');
-        return getFallbackResponse(prompt);
-    }
-    
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229',
-            max_tokens: maxTokens,
-            messages: [{ role: 'user', content: prompt }]
-        })
+    const textLower = text.toLowerCase();
+    let score = 0.5;
+    let totalWeight = 0;
+
+    positiveWords.forEach(word => {
+        if (textLower.includes(word)) {
+            score += 0.12;
+            totalWeight++;
+        }
     });
+
+    negativeWords.forEach(word => {
+        if (textLower.includes(word)) {
+            score -= 0.12;
+            totalWeight++;
+        }
+    });
+
+    // Intensifiers
+    if (textLower.includes('sangat') || textLower.includes('sekali') || textLower.includes('very')) {
+        score += (score - 0.5) * 0.3;
+    }
+
+    return Math.max(0, Math.min(1, score));
+}
+
+function getSentimentLabel(score) {
+    if (score > 0.7) return { label: 'Sangat Positif', emoji: '🌟' };
+    if (score > 0.5) return { label: 'Positif', emoji: '😊' };
+    if (score > 0.3) return { label: 'Netral', emoji: '😐' };
+    if (score > 0.1) return { label: 'Negatif', emoji: '😢' };
+    return { label: 'Sangat Negatif', emoji: '💔' };
+}
+
+function extractKeywords(text) {
+    const words = text.toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .filter(word => word.length > 3);
     
-    const data = await response.json();
-    return data.content?.[0]?.text || getFallbackResponse(prompt);
+    const wordCount = {};
+    words.forEach(word => {
+        wordCount[word] = (wordCount[word] || 0) + 1;
+    });
+
+    const sorted = Object.entries(wordCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([word]) => word);
+
+    return sorted;
 }
 
-function getFallbackResponse(prompt) {
-    if (prompt.includes('kutipan')) {
-        return "KUTIPAN: Kebahagiaan bukanlah sesuatu yang sudah jadi. Itu datang dari tindakanmu sendiri.\nPENULIS: Dalai Lama";
-    }
-    if (prompt.includes('saran praktis')) {
-        return "Luangkan waktu 5 menit untuk bernapas dalam-dalam dan tuliskan 3 hal yang kamu syukuri hari ini.";
-    }
-    if (prompt.includes('psikolog virtual')) {
-        return "Dari data yang ada, terlihat ada fluktuasi emosi yang wajar. Trigger yang paling sering muncul adalah pekerjaan. Cobalah untuk menyisihkan waktu istirahat singkat di sela-sela aktivitas. Minggu depan, coba praktikkan teknik Pomodoro: 25 menit fokus, 5 menit istirahat. Ini bisa membantu mengurangi stres.";
-    }
-    return "Terima kasih sudah mencatat emosi hari ini. Kamu hebat! 💚";
-}
+// ============ ERROR HANDLING ============
 
-// Serve frontend
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({ error: 'Internal server error' });
 });
+
+// ============ START SERVER ============
 
 app.listen(PORT, () => {
-    console.log(`🚀 HiddenFeel server running on http://localhost:${PORT}`);
+    console.log('╔═══════════════════════════════════════╗');
+    console.log('║   🚀 HiddenFeel Server Started       ║');
+    console.log('╠═══════════════════════════════════════╣');
+    console.log(`║   📡 Port: ${PORT}                         ║`);
+    console.log(`║   🌐 URL: http://localhost:${PORT}         ║`);
+    console.log('║   📝 Login: /login.html              ║');
+    console.log('║   📊 Stats: /stats.html              ║');
+    console.log('╚═══════════════════════════════════════╝');
+    console.log('\n✨ Server is ready!');
 });
+
+module.exports = app;
