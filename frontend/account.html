@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiddenFeel · Akun Saya</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--accent), #c06840);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 16px;
+        }
+        .profile-name {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .profile-username {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text2);
+            margin-bottom: 20px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .info-label {
+            font-weight: 600;
+            color: var(--text2);
+        }
+        .info-value {
+            color: var(--text);
+        }
+        .edit-form {
+            margin-top: 20px;
+            display: none;
+        }
+        .edit-form.show {
+            display: block;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text2);
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        .btn-small {
+            background: var(--accent);
+            border: none;
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-secondary {
+            background: var(--bg3);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .stats-mini {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        .stat-mini-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background: var(--bg3);
+            border-radius: 12px;
+        }
+        .stat-mini-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .stat-mini-label {
+            font-size: 0.7rem;
+            color: var(--text2);
+        }
+        .error-msg, .success-msg {
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .error-msg { background: #fee; color: #c0392b; }
+        .success-msg { background: #e8f5e9; color: #2e7d32; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <a href="today.html" class="logo">Hidden<span>Feel</span></a>
+        <div class="header-actions">
+            <div class="streak-pill">🔥 <span id="streakVal">0</span> hari</div>
+            <button class="theme-btn" id="themeToggle" title="Ganti tema">🌙</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="profile-avatar">😊</div>
+        <div class="profile-name" id="fullnameDisplay"></div>
+        <div class="profile-username" id="usernameDisplay"></div>
+        
+        <div id="errorMsg" class="error-msg"></div>
+        <div id="successMsg" class="success-msg"></div>
+        
+        <div class="info-row">
+            <span class="info-label">Username</span>
+            <span class="info-value" id="infoUsername">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Nama Lengkap</span>
+            <span class="info-value" id="infoFullname">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value" id="infoEmail">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Bergabung Sejak</span>
+            <span class="info-value" id="infoJoined">-</span>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn-small" id="editProfileBtn">✏️ Edit Profil</button>
+            <button class="btn-small btn-secondary" id="changePasswordBtn">🔒 Ganti Password</button>
+        </div>
+        
+        <!-- Edit Profile Form -->
+        <div id="editForm" class="edit-form">
+            <div class="input-group">
+                <label>Nama Lengkap</label>
+                <input type="text" id="editFullname" placeholder="Nama lengkap">
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="editEmail" placeholder="Email">
+            </div>
+            <button class="btn-small" id="saveProfileBtn">💾 Simpan</button>
+            <button class="btn-small btn-secondary" id="cancelEditBtn">Batal</button>
+        </div>
+        
+        <!-- Change Password Form -->
+        <div id="passwordForm" class="edit-form">
+            <div class="input-group">
+                <label>Password Lama</label>
+                <input type="password" id="oldPassword" placeholder="Password lama">
+            </div>
+            <div class="input-group">
+                <label>Password Baru</label>
+                <input type="password" id="newPassword" placeholder="Minimal 4 karakter">
+            </div>
+            <div class="input-group">
+                <label>Konfirmasi Password Baru</label>
+                <input type="password" id="confirmNewPassword" placeholder="Ketik ulang password baru">
+            </div>
+            <button class="btn-small" id="savePasswordBtn">💾 Simpan Password</button>
+            <button class="btn-small btn-secondary" id="cancelPasswordBtn">Batal</button>
+        </div>
+        
+        <!-- Mini Stats -->
+        <div class="stats-mini">
+            <div class="stat-mini-item">
+                <div class="stat-mini-number" id="statTotal">0</div>
+                <div class="stat-mini-label">Total Entri</div>
+            </div>
+            <div class="stat-mini-item">
+                <div class="stat-mini-number" id="statAvg">0</div>
+                <div class="stat-mini-label">Rata-rata Mood</div>
+            </div>
+            <div class="stat-mini-item">
+                <div class="stat-mini-number" id="statStreak">0</div>
+                <div class="stat-mini-label">Streak</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>Bukan alat diagnosis medis. Jaga kesehatan mentalmu 💚</footer>
+</div>
+
+<nav class="bottom-nav">
+    <a href="today.html" class="nav-item">
+        <span class="nav-icon">📝</span>Hari Ini
+    </a>
+    <a href="stats.html" class="nav-item">
+        <span class="nav-icon">📊</span>Statistik
+    </a>
+    <a href="history.html" class="nav-item">
+        <span class="nav-icon">📜</span>Riwayat
+    </a>
+    <a href="calendar.html" class="nav-item">
+        <span class="nav-icon">📅</span>Kalender
+    </a>
+    <a href="insight.html" class="nav-item">
+        <span class="nav-icon">✦</span>AI
+    </a>
+</nav>
+
+<script src="js/common.js"></script>
+<script>
+let userData = null;
+
+async function loadUserData() {
+    userData = await checkAuth();
+    if (!userData) return;
+    
+    document.getElementById('infoUsername').textContent = userData.username;
+    document.getElementById('infoFullname').textContent = userData.fullname || '-';
+    document.getElementById('infoEmail').textContent = userData.email || '-';
+    document.getElementById('fullnameDisplay').textContent = userData.fullname || userData.username;
+    document.getElementById('usernameDisplay').textContent = '@' + userData.username;
+    
+    const joinedDate = userData.created_at ? new Date(userData.created_at).toLocaleDateString('id-ID') : '-';
+    document.getElementById('infoJoined').textContent = joinedDate;
+    
+    // Load stats
+    const entriesData = await fetchEntries();
+    const streak = calcStreak(entriesData);
+    const avgMood = entriesData.length ? (entriesData.reduce((a, e) => a + e.moodVal, 0) / entriesData.length).toFixed(1) : 0;
+    
+    document.getElementById('statTotal').textContent = entriesData.length;
+    document.getElementById('statAvg').textContent = avgMood;
+    document.getElementById('statStreak').textContent = streak;
+    document.getElementById('streakVal').textContent = streak;
+}
+
+// Edit Profile
+document.getElementById('editProfileBtn').onclick = () => {
+    document.getElementById('editForm').classList.add('show');
+    document.getElementById('passwordForm').classList.remove('show');
+    document.getElementById('editFullname').value = userData.fullname || '';
+    document.getElementById('editEmail').value = userData.email || '';
+};
+
+document.getElementById('cancelEditBtn').onclick = () => {
+    document.getElementById('editForm').classList.remove('show');
+};
+
+document.getElementById('saveProfileBtn').onclick = async () => {
+    const fullname = document.getElementById('editFullname').value.trim();
+    const email = document.getElementById('editEmail').value.trim();
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'update_profile',
+                fullname: fullname,
+                email: email
+            })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('successMsg').textContent = data.message;
+            document.getElementById('successMsg').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('successMsg').style.display = 'none';
+            }, 3000);
+            loadUserData();
+            document.getElementById('editForm').classList.remove('show');
+        } else {
+            document.getElementById('errorMsg').textContent = data.message;
+            document.getElementById('errorMsg').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('errorMsg').style.display = 'none';
+            }, 3000);
+        }
+    } catch (error) {
+        document.getElementById('errorMsg').textContent = 'Gagal menyimpan';
+        document.getElementById('errorMsg').style.display = 'block';
+    }
+};
+
+// Change Password
+document.getElementById('changePasswordBtn').onclick = () => {
+    document.getElementById('passwordForm').classList.add('show');
+    document.getElementById('editForm').classList.remove('show');
+    document.getElementById('oldPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmNewPassword').value = '';
+};
+
+document.getElementById('cancelPasswordBtn').onclick = () => {
+    document.getElementById('passwordForm').classList.remove('show');
+};
+
+document.getElementById('savePasswordBtn').onclick = async () => {
+    const oldPassword = document.getElementById('oldPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmNewPassword').value;
+    
+    if (newPassword.length < 4) {
+        document.getElementById('errorMsg').textContent = 'Password baru minimal 4 karakter';
+        document.getElementById('errorMsg').style.display = 'block';
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        document.getElementById('errorMsg').textContent = 'Password baru tidak cocok';
+        document.getElementById('errorMsg').style.display = 'block';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'change_password',
+                old_password: oldPassword,
+                new_password: newPassword
+            })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('successMsg').textContent = data.message;
+            document.getElementById('successMsg').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('successMsg').style.display = 'none';
+            }, 3000);
+            document.getElementById('passwordForm').classList.remove('show');
+        } else {
+            document.getElementById('errorMsg').textContent = data.message;
+            document.getElementById('errorMsg').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('errorMsg').style.display = 'none';
+            }, 3000);
+        }
+    } catch (error) {
+        document.getElementById('errorMsg').textContent = 'Gagal mengganti password';
+        document.getElementById('errorMsg').style.display = 'block';
+    }
+};
+
+// Init
+initTheme();
+loadUserData();
+setActiveNav();
+addLogoutButton();
+</script>
+</body>
+</html>

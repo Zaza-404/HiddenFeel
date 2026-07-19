@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiddenFeel · Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-card {
+            max-width: 380px;
+            width: 100%;
+            background: var(--bg2);
+            border-radius: var(--radius);
+            padding: 32px 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+        }
+        .auth-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-style: italic;
+            color: var(--accent);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .auth-logo span { color: var(--text); font-style: normal; }
+        .auth-sub {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text2);
+            margin-bottom: 28px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text2);
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .btn-auth {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent), #c06840);
+            border: none;
+            border-radius: 50px;
+            padding: 14px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .auth-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.8rem;
+            color: var(--text2);
+        }
+        .auth-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .error-msg {
+            background: #fee;
+            color: #c0392b;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .success-msg {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">Hidden<span>Feel</span></div>
+        <div class="auth-sub">Jurnal emosi pribadimu</div>
+        
+        <div id="errorMsg" class="error-msg"></div>
+        <div id="successMsg" class="success-msg"></div>
+        
+        <form id="loginForm">
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Masukkan username" required>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Masukkan password" required>
+            </div>
+            <button type="submit" class="btn-auth">🔓 Login</button>
+        </form>
+        
+        <div class="auth-footer">
+            Belum punya akun? <a href="register.html">Daftar sekarang</a>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE = '/hiddenfeel/backend';
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    
+    const errorDiv = document.getElementById('errorMsg');
+    const successDiv = document.getElementById('successMsg');
+    
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'login',
+                username: username,
+                password: password
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            successDiv.textContent = data.message;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                window.location.href = 'today.html';
+            }, 1000);
+        } else {
+            errorDiv.textContent = data.message;
+            errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Gagal terhubung ke server';
+        errorDiv.style.display = 'block';
+    }
+});
+</script>
+
+</body>
+</html>

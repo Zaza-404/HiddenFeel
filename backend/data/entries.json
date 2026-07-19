@@ -1,0 +1,16 @@
+[
+    {
+        "date": "2026-06-05",
+        "moodEmoji": "\ud83e\udd70",
+        "moodName": "Bersyukur",
+        "moodVal": 5,
+        "intensity": 3,
+        "triggers": [
+            "\u2764\ufe0f Kesehatan"
+        ],
+        "energy": "\u26a1 Cukup Berenergi",
+        "note": "",
+        "ts": 1780674442605,
+        "user_id": "6a22ed2a2f9b2"
+    }
+]

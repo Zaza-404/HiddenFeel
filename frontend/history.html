@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiddenFeel · Riwayat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <a href="today.html" class="logo">Hidden<span>Feel</span></a>
+        <div class="header-actions">
+            <div class="streak-pill">🔥 <span id="streakVal">0</span> hari</div>
+            <button class="theme-btn" id="themeToggle" title="Ganti tema">🌙</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">📜 Semua Catatan</div>
+            <div style="font-size:0.75rem;color:var(--text2);" id="historyCount"></div>
+        </div>
+        <div id="historyList"></div>
+    </div>
+
+    <footer>Bukan alat diagnosis medis. Jaga kesehatan mentalmu 💚</footer>
+</div>
+
+<nav class="bottom-nav">
+    <a href="today.html" class="nav-item">
+        <span class="nav-icon">📝</span>Hari Ini
+    </a>
+    <a href="stats.html" class="nav-item">
+        <span class="nav-icon">📊</span>Statistik
+    </a>
+    <a href="history.html" class="nav-item active">
+        <span class="nav-icon">📜</span>Riwayat
+    </a>
+    <a href="calendar.html" class="nav-item">
+        <span class="nav-icon">📅</span>Kalender
+    </a>
+    <a href="insight.html" class="nav-item">
+        <span class="nav-icon">✦</span>AI
+    </a>
+</nav>
+
+<script src="js/common.js"></script>
+<script>
+// Check authentication before loading page
+(async function() {
+    const isAuthed = await checkAuth();
+    if (!isAuthed) return;
+    addLogoutButton();
+})();
+</script>
+<script src="js/history.js"></script>
+</body>
+</html>

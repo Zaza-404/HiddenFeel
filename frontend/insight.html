@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiddenFeel · AI Insight</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <a href="today.html" class="logo">Hidden<span>Feel</span></a>
+        <div class="header-actions">
+            <div class="streak-pill">🔥 <span id="streakVal">0</span> hari</div>
+            <button class="theme-btn" id="themeToggle" title="Ganti tema">🌙</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">✦ Refleksi Mingguan AI</div>
+        <div id="weeklyInsight" style="margin-top:12px;">
+            <div class="insight-placeholder">Tekan tombol untuk mendapat analisa dari AI tentang pola emosimu minggu ini.</div>
+            <button class="btn-save" id="weeklyInsightBtn" style="margin-top:14px;">🔍 Analisa Minggu Ini</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">💬 Kutipan Hari Ini</div>
+        <div id="quoteContent" style="margin-top:12px;">
+            <div class="insight-loading"><span>Memuat kutipan…</span><div class="dot-pulse"><span></span><span></span><span></span></div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🎯 Saran untuk Besok</div>
+        <div id="tipContent" style="margin-top:12px;">
+            <div class="insight-loading"><span>Memuat saran…</span><div class="dot-pulse"><span></span><span></span><span></span></div></div>
+        </div>
+    </div>
+
+    <footer>Bukan alat diagnosis medis. Jaga kesehatan mentalmu 💚</footer>
+</div>
+
+<nav class="bottom-nav">
+    <a href="today.html" class="nav-item">
+        <span class="nav-icon">📝</span>Hari Ini
+    </a>
+    <a href="stats.html" class="nav-item">
+        <span class="nav-icon">📊</span>Statistik
+    </a>
+    <a href="history.html" class="nav-item">
+        <span class="nav-icon">📜</span>Riwayat
+    </a>
+    <a href="calendar.html" class="nav-item">
+        <span class="nav-icon">📅</span>Kalender
+    </a>
+    <a href="insight.html" class="nav-item active">
+        <span class="nav-icon">✦</span>AI
+    </a>
+</nav>
+
+<script src="js/common.js"></script>
+<script>
+// Check authentication before loading page
+(async function() {
+    const isAuthed = await checkAuth();
+    if (!isAuthed) return;
+    addLogoutButton();
+})();
+</script>
+<script src="js/insight.js"></script>
+</body>
+</html>

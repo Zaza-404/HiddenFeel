@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiddenFeel · Statistik</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <a href="today.html" class="logo">Hidden<span>Feel</span></a>
+        <div class="header-actions">
+            <div class="streak-pill">🔥 <span id="streakVal">0</span> hari</div>
+            <button class="theme-btn" id="themeToggle" title="Ganti tema">🌙</button>
+        </div>
+    </div>
+
+    <div id="weeklyBadge" class="weekly-badge" style="display:none;">
+        <div class="weekly-badge-icon">🏆</div>
+        <div>
+            <div class="weekly-badge-title">7 Hari Berturut!</div>
+            <div class="weekly-badge-sub">Kamu konsisten minggu ini 🎉</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📊 Ringkasan</div>
+        <div class="stats-row" style="margin-top:14px;">
+            <div class="stat-card">
+                <div class="stat-num" id="statTotal">0</div>
+                <div class="stat-lbl">Total Entri</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" id="statAvg">—</div>
+                <div class="stat-lbl">Rata‑rata Mood</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" id="statStreak2">0</div>
+                <div class="stat-lbl">Streak Hari</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📈 Tren 7 Hari</div>
+        <div class="chart-wrap" id="barChart"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🥧 Distribusi Mood</div>
+        <div class="donut-wrap" id="donutArea" style="margin-top:12px;">
+            <svg class="donut-svg" width="90" height="90" viewBox="0 0 90 90" id="donutSvg"></svg>
+            <div class="donut-legend" id="donutLegend"></div>
+        </div>
+        <div id="donutEmpty" style="display:none;font-size:0.8rem;color:var(--text2);text-align:center;padding:20px 0;">Belum ada data</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">⚡ Trigger Paling Sering</div>
+        <div id="triggerRank" style="margin-top:10px;"></div>
+    </div>
+
+    <footer>Bukan alat diagnosis medis. Jaga kesehatan mentalmu 💚</footer>
+</div>
+
+<nav class="bottom-nav">
+    <a href="today.html" class="nav-item">
+        <span class="nav-icon">📝</span>Hari Ini
+    </a>
+    <a href="stats.html" class="nav-item active">
+        <span class="nav-icon">📊</span>Statistik
+    </a>
+    <a href="history.html" class="nav-item">
+        <span class="nav-icon">📜</span>Riwayat
+    </a>
+    <a href="calendar.html" class="nav-item">
+        <span class="nav-icon">📅</span>Kalender
+    </a>
+    <a href="insight.html" class="nav-item">
+        <span class="nav-icon">✦</span>AI
+    </a>
+</nav>
+
+<script src="js/common.js"></script>
+<script>
+// Check authentication before loading page
+(async function() {
+    const isAuthed = await checkAuth();
+    if (!isAuthed) return;
+    addLogoutButton();
+})();
+</script>
+<script src="js/stats.js"></script>
+</body>
+</html>
