@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HiddenFeel · Hari Ini</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
 
@@ -27,21 +27,11 @@
     <div class="card">
         <div class="section-label">Perasaanmu hari ini</div>
         <div class="mood-grid" id="moodGrid"></div>
-        <div class="intensity-row" id="intensityRow" style="display:none;">
+        <div class="intensity-row" id="intensityRow">
             <span class="intensity-label">Intensitas</span>
             <input type="range" class="intensity-slider" id="intensitySlider" min="1" max="5" value="3">
             <span class="intensity-val" id="intensityVal">3</span>
         </div>
-    </div>
-
-    <div class="card">
-        <div class="section-label">Energi fisik</div>
-        <div class="energy-row" id="energyRow"></div>
-    </div>
-
-    <div class="card">
-        <div class="section-label">Apa yang mempengaruhimu?</div>
-        <div class="triggers-wrap" id="triggersGrid"></div>
     </div>
 
     <div class="card">
@@ -77,15 +67,218 @@
     </a>
 </nav>
 
-<script src="js/common.js"></script>
 <script>
-// Check authentication before loading page
-(async function() {
-    const isAuthed = await checkAuth();
-    if (!isAuthed) return;
-    addLogoutButton();
-})();
+// ============ CONFIG ============
+const API_BASE = 'http://localhost:3000/api';
+const MOODS = [
+    { emoji: '😊', name: 'Bahagia', value: 5 },
+    { emoji: '😌', name: 'Tenang', value: 4 },
+    { emoji: '😐', name: 'Biasa', value: 3 },
+    { emoji: '😢', name: 'Sedih', value: 2 },
+    { emoji: '😡', name: 'Marah', value: 1 }
+];
+
+// ============ STATE ============
+let selectedMood = null;
+let entries = [];
+let user = null;
+
+// ============ AUTH ============
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+function getUser() {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+}
+
+async function checkAuth() {
+    const token = getToken();
+    if (!token) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    user = getUser();
+    return true;
+}
+
+// ============ API ============
+async function apiFetch(endpoint, options = {}) {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+    };
+    
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers
+    });
+    
+    if (response.status === 401) {
+        logout();
+        throw new Error('Sesi habis');
+    }
+    
+    return response.json();
+}
+
+async function fetchEntries() {
+    const data = await apiFetch('/entries');
+    entries = data;
+    return data;
+}
+
+async function saveEntry(data) {
+    return await apiFetch('/entries', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+}
+
+async function getStats() {
+    return await apiFetch('/stats');
+}
+
+// ============ UTILITIES ============
+function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Selamat pagi 🌅';
+    if (hour < 18) return 'Selamat siang ☀️';
+    return 'Selamat malam 🌙';
+}
+
+function formatDate() {
+    return new Date().toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+function getMoodEmoji(value) {
+    const mood = MOODS.find(m => m.value === value);
+    return mood ? mood.emoji : '😐';
+}
+
+function getMoodName(value) {
+    const mood = MOODS.find(m => m.value === value);
+    return mood ? mood.name : 'Biasa';
+}
+
+// ============ RENDER ============
+function renderMoodGrid() {
+    const grid = document.getElementById('moodGrid');
+    grid.innerHTML = '';
+    
+    MOODS.forEach(mood => {
+        const btn = document.createElement('div');
+        btn.className = 'mood-btn';
+        btn.dataset.value = mood.value;
+        btn.innerHTML = `
+            <div class="mood-emoji">${mood.emoji}</div>
+            <div class="mood-label">${mood.name}</div>
+        `;
+        btn.onclick = () => selectMood(mood.value);
+        grid.appendChild(btn);
+    });
+}
+
+function selectMood(value) {
+    selectedMood = value;
+    document.querySelectorAll('.mood-btn').forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.value) === value);
+    });
+}
+
+// ============ INIT ============
+async function init() {
+    // Check auth
+    if (!await checkAuth()) return;
+    
+    // Set greeting
+    document.getElementById('greetingDate').textContent = formatDate();
+    document.getElementById('greetingText').textContent = getGreeting();
+    
+    // Render mood grid
+    renderMoodGrid();
+    
+    // Select default mood
+    selectMood(3);
+    
+    // Intensity slider
+    const slider = document.getElementById('intensitySlider');
+    const valDisplay = document.getElementById('intensityVal');
+    slider.addEventListener('input', () => {
+        valDisplay.textContent = slider.value;
+    });
+    
+    // Theme toggle
+    const themeBtn = document.getElementById('themeToggle');
+    themeBtn.addEventListener('click', () => {
+        document.documentElement.toggleAttribute('data-theme');
+        themeBtn.textContent = document.documentElement.hasAttribute('data-theme') ? '☀️' : '🌙';
+    });
+    
+    // Save button
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+        const note = document.getElementById('noteInput').value.trim();
+        const intensity = parseInt(document.getElementById('intensitySlider').value);
+        
+        if (!selectedMood) {
+            alert('Pilih perasaanmu dulu!');
+            return;
+        }
+        
+        if (!note || note.length < 3) {
+            alert('Tulis refleksi minimal 3 karakter');
+            return;
+        }
+        
+        try {
+            const result = await saveEntry({
+                mood: getMoodEmoji(selectedMood),
+                feeling_text: note,
+                note: note
+            });
+            
+            if (result.success) {
+                alert('✅ Perasaan tersimpan!');
+                document.getElementById('noteInput').value = '';
+                
+                // Update streak
+                updateStreak();
+            }
+        } catch (error) {
+            alert('Gagal menyimpan: ' + error.message);
+        }
+    });
+    
+    // Update streak
+    await updateStreak();
+}
+
+async function updateStreak() {
+    try {
+        const stats = await getStats();
+        document.getElementById('streakVal').textContent = stats.streak || 0;
+    } catch (error) {
+        console.error('Failed to load stats:', error);
+    }
+}
+
+// ============ RUN ============
+init();
 </script>
-<script src="js/today.js"></script>
+
 </body>
 </html>

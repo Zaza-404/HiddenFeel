@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HiddenFeel · Akun Saya</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
     <style>
         .profile-avatar {
             width: 80px;
@@ -49,26 +49,6 @@
         }
         .edit-form.show {
             display: block;
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        .input-group label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: var(--text2);
-        }
-        .input-group input {
-            width: 100%;
-            padding: 10px 12px;
-            background: var(--bg3);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            color: var(--text);
         }
         .btn-small {
             background: var(--accent);
@@ -119,6 +99,42 @@
         }
         .error-msg { background: #fee; color: #c0392b; }
         .success-msg { background: #e8f5e9; color: #2e7d32; }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text2);
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -133,20 +149,16 @@
     </div>
 
     <div class="card">
-        <div class="profile-avatar">😊</div>
-        <div class="profile-name" id="fullnameDisplay"></div>
-        <div class="profile-username" id="usernameDisplay"></div>
+        <div class="profile-avatar" id="avatarDisplay">😊</div>
+        <div class="profile-name" id="fullnameDisplay">-</div>
+        <div class="profile-username" id="usernameDisplay">@username</div>
         
         <div id="errorMsg" class="error-msg"></div>
         <div id="successMsg" class="success-msg"></div>
         
         <div class="info-row">
-            <span class="info-label">Username</span>
-            <span class="info-value" id="infoUsername">-</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Nama Lengkap</span>
-            <span class="info-value" id="infoFullname">-</span>
+            <span class="info-label">Nama</span>
+            <span class="info-value" id="infoName">-</span>
         </div>
         <div class="info-row">
             <span class="info-label">Email</span>
@@ -157,20 +169,18 @@
             <span class="info-value" id="infoJoined">-</span>
         </div>
         
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
             <button class="btn-small" id="editProfileBtn">✏️ Edit Profil</button>
             <button class="btn-small btn-secondary" id="changePasswordBtn">🔒 Ganti Password</button>
+            <button class="btn-danger" id="logoutBtn">🚪 Keluar</button>
         </div>
         
         <!-- Edit Profile Form -->
         <div id="editForm" class="edit-form">
+            <h4 style="margin-bottom: 15px;">Edit Profil</h4>
             <div class="input-group">
-                <label>Nama Lengkap</label>
-                <input type="text" id="editFullname" placeholder="Nama lengkap">
-            </div>
-            <div class="input-group">
-                <label>Email</label>
-                <input type="email" id="editEmail" placeholder="Email">
+                <label>Nama</label>
+                <input type="text" id="editName" placeholder="Nama lengkap">
             </div>
             <button class="btn-small" id="saveProfileBtn">💾 Simpan</button>
             <button class="btn-small btn-secondary" id="cancelEditBtn">Batal</button>
@@ -178,17 +188,10 @@
         
         <!-- Change Password Form -->
         <div id="passwordForm" class="edit-form">
-            <div class="input-group">
-                <label>Password Lama</label>
-                <input type="password" id="oldPassword" placeholder="Password lama">
-            </div>
+            <h4 style="margin-bottom: 15px;">Ganti Password</h4>
             <div class="input-group">
                 <label>Password Baru</label>
-                <input type="password" id="newPassword" placeholder="Minimal 4 karakter">
-            </div>
-            <div class="input-group">
-                <label>Konfirmasi Password Baru</label>
-                <input type="password" id="confirmNewPassword" placeholder="Ketik ulang password baru">
+                <input type="password" id="newPassword" placeholder="Minimal 6 karakter">
             </div>
             <button class="btn-small" id="savePasswordBtn">💾 Simpan Password</button>
             <button class="btn-small btn-secondary" id="cancelPasswordBtn">Batal</button>
@@ -232,40 +235,160 @@
     </a>
 </nav>
 
-<script src="js/common.js"></script>
 <script>
+// ============ CONFIG ============
+const API_BASE = 'http://localhost:3000/api';
+
+// ============ AUTH ============
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+function getUser() {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+}
+
+async function checkAuth() {
+    const token = getToken();
+    if (!token) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+// ============ API ============
+async function apiFetch(endpoint, options = {}) {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+    };
+    
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers
+    });
+    
+    if (response.status === 401) {
+        logout();
+        throw new Error('Sesi habis');
+    }
+    
+    return response.json();
+}
+
+async function fetchEntries() {
+    return await apiFetch('/entries');
+}
+
+async function updateProfile(data) {
+    return await apiFetch('/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    });
+}
+
+async function getStats() {
+    return await apiFetch('/stats');
+}
+
+// ============ UTILITIES ============
+function calcStreak(entries) {
+    if (!entries || entries.length === 0) return 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const entryDates = new Set();
+    entries.forEach(e => {
+        const date = new Date(e.created_at);
+        date.setHours(0, 0, 0, 0);
+        entryDates.add(date.getTime());
+    });
+    
+    let streak = 0;
+    let checkDate = new Date(today);
+    
+    while (entryDates.has(checkDate.getTime())) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+    }
+    
+    return streak;
+}
+
+// ============ LOAD DATA ============
 let userData = null;
 
 async function loadUserData() {
-    userData = await checkAuth();
-    if (!userData) return;
+    userData = getUser();
+    if (!userData) {
+        await checkAuth();
+        userData = getUser();
+    }
     
-    document.getElementById('infoUsername').textContent = userData.username;
-    document.getElementById('infoFullname').textContent = userData.fullname || '-';
+    document.getElementById('infoName').textContent = userData.name || '-';
     document.getElementById('infoEmail').textContent = userData.email || '-';
-    document.getElementById('fullnameDisplay').textContent = userData.fullname || userData.username;
-    document.getElementById('usernameDisplay').textContent = '@' + userData.username;
+    document.getElementById('fullnameDisplay').textContent = userData.name || 'Pengguna';
+    document.getElementById('usernameDisplay').textContent = '@' + (userData.email ? userData.email.split('@')[0] : 'user');
     
-    const joinedDate = userData.created_at ? new Date(userData.created_at).toLocaleDateString('id-ID') : '-';
+    const joinedDate = userData.created_at ? new Date(userData.created_at).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }) : '-';
     document.getElementById('infoJoined').textContent = joinedDate;
     
     // Load stats
-    const entriesData = await fetchEntries();
-    const streak = calcStreak(entriesData);
-    const avgMood = entriesData.length ? (entriesData.reduce((a, e) => a + e.moodVal, 0) / entriesData.length).toFixed(1) : 0;
-    
-    document.getElementById('statTotal').textContent = entriesData.length;
-    document.getElementById('statAvg').textContent = avgMood;
-    document.getElementById('statStreak').textContent = streak;
-    document.getElementById('streakVal').textContent = streak;
+    try {
+        const entriesData = await fetchEntries();
+        const streak = calcStreak(entriesData);
+        const avgMood = entriesData.length ? 
+            (entriesData.reduce((a, e) => a + (e.mood_val || 3), 0) / entriesData.length).toFixed(1) : 0;
+        
+        document.getElementById('statTotal').textContent = entriesData.length;
+        document.getElementById('statAvg').textContent = avgMood;
+        document.getElementById('statStreak').textContent = streak;
+        document.getElementById('streakVal').textContent = streak;
+    } catch (error) {
+        console.error('Failed to load stats:', error);
+    }
 }
 
+// ============ THEME ============
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+        themeBtn.textContent = document.documentElement.hasAttribute('data-theme') ? '☀️' : '🌙';
+        themeBtn.addEventListener('click', () => {
+            document.documentElement.toggleAttribute('data-theme');
+            const isDark = document.documentElement.hasAttribute('data-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            themeBtn.textContent = isDark ? '☀️' : '🌙';
+        });
+    }
+}
+
+// ============ EVENTS ============
 // Edit Profile
 document.getElementById('editProfileBtn').onclick = () => {
     document.getElementById('editForm').classList.add('show');
     document.getElementById('passwordForm').classList.remove('show');
-    document.getElementById('editFullname').value = userData.fullname || '';
-    document.getElementById('editEmail').value = userData.email || '';
+    document.getElementById('editName').value = userData.name || '';
 };
 
 document.getElementById('cancelEditBtn').onclick = () => {
@@ -273,40 +396,25 @@ document.getElementById('cancelEditBtn').onclick = () => {
 };
 
 document.getElementById('saveProfileBtn').onclick = async () => {
-    const fullname = document.getElementById('editFullname').value.trim();
-    const email = document.getElementById('editEmail').value.trim();
+    const name = document.getElementById('editName').value.trim();
+    
+    if (!name) {
+        showError('Nama tidak boleh kosong');
+        return;
+    }
     
     try {
-        const response = await fetch(`${API_BASE}/auth`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'update_profile',
-                fullname: fullname,
-                email: email
-            })
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            document.getElementById('successMsg').textContent = data.message;
-            document.getElementById('successMsg').style.display = 'block';
-            setTimeout(() => {
-                document.getElementById('successMsg').style.display = 'none';
-            }, 3000);
-            loadUserData();
+        const result = await updateProfile({ name });
+        if (result.success) {
+            showSuccess('Profil berhasil diperbarui!');
+            localStorage.setItem('user', JSON.stringify(result.user));
+            userData = result.user;
+            document.getElementById('fullnameDisplay').textContent = name;
+            document.getElementById('infoName').textContent = name;
             document.getElementById('editForm').classList.remove('show');
-        } else {
-            document.getElementById('errorMsg').textContent = data.message;
-            document.getElementById('errorMsg').style.display = 'block';
-            setTimeout(() => {
-                document.getElementById('errorMsg').style.display = 'none';
-            }, 3000);
         }
     } catch (error) {
-        document.getElementById('errorMsg').textContent = 'Gagal menyimpan';
-        document.getElementById('errorMsg').style.display = 'block';
+        showError(error.message || 'Gagal menyimpan');
     }
 };
 
@@ -314,9 +422,7 @@ document.getElementById('saveProfileBtn').onclick = async () => {
 document.getElementById('changePasswordBtn').onclick = () => {
     document.getElementById('passwordForm').classList.add('show');
     document.getElementById('editForm').classList.remove('show');
-    document.getElementById('oldPassword').value = '';
     document.getElementById('newPassword').value = '';
-    document.getElementById('confirmNewPassword').value = '';
 };
 
 document.getElementById('cancelPasswordBtn').onclick = () => {
@@ -324,60 +430,50 @@ document.getElementById('cancelPasswordBtn').onclick = () => {
 };
 
 document.getElementById('savePasswordBtn').onclick = async () => {
-    const oldPassword = document.getElementById('oldPassword').value;
     const newPassword = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmNewPassword').value;
     
-    if (newPassword.length < 4) {
-        document.getElementById('errorMsg').textContent = 'Password baru minimal 4 karakter';
-        document.getElementById('errorMsg').style.display = 'block';
-        return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-        document.getElementById('errorMsg').textContent = 'Password baru tidak cocok';
-        document.getElementById('errorMsg').style.display = 'block';
+    if (newPassword.length < 6) {
+        showError('Password minimal 6 karakter');
         return;
     }
     
     try {
-        const response = await fetch(`${API_BASE}/auth`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'change_password',
-                old_password: oldPassword,
-                new_password: newPassword
-            })
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            document.getElementById('successMsg').textContent = data.message;
-            document.getElementById('successMsg').style.display = 'block';
-            setTimeout(() => {
-                document.getElementById('successMsg').style.display = 'none';
-            }, 3000);
+        const result = await updateProfile({ password: newPassword });
+        if (result.success) {
+            showSuccess('Password berhasil diganti!');
             document.getElementById('passwordForm').classList.remove('show');
-        } else {
-            document.getElementById('errorMsg').textContent = data.message;
-            document.getElementById('errorMsg').style.display = 'block';
-            setTimeout(() => {
-                document.getElementById('errorMsg').style.display = 'none';
-            }, 3000);
         }
     } catch (error) {
-        document.getElementById('errorMsg').textContent = 'Gagal mengganti password';
-        document.getElementById('errorMsg').style.display = 'block';
+        showError(error.message || 'Gagal mengganti password');
     }
 };
 
-// Init
-initTheme();
-loadUserData();
-setActiveNav();
-addLogoutButton();
+// Logout
+document.getElementById('logoutBtn').onclick = logout;
+
+// ============ TOAST ============
+function showError(message) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = message;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+function showSuccess(message) {
+    const el = document.getElementById('successMsg');
+    el.textContent = message;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// ============ INIT ============
+async function init() {
+    if (!await checkAuth()) return;
+    initTheme();
+    await loadUserData();
+}
+
+init();
 </script>
 </body>
 </html>

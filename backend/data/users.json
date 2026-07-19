@@ -1,8 +1,15 @@
 [
-    {
-        "id": "6a22ed2a2f9b2",
-        "username": "zaza",
-        "password": "$2y$10$GPcst7ANrDdWxZxM8kUjuetLD0h\/JA2xCSaBaHevCkieOpo6ayPPq",
-        "created_at": "2026-06-05T15:37:14+00:00"
-    }
+  {
+    "id": "6a22ed2a2f9b2",
+    "username": "zaza",
+    "password": "$2y$10$GPcst7ANrDdWxZxM8kUjuetLD0h/JA2xCSaBaHevCkieOpo6ayPPq",
+    "created_at": "2026-06-05T15:37:14+00:00"
+  },
+  {
+    "id": 1,
+    "name": "Test User",
+    "email": "test@email.com",
+    "password": "$2a$10$gZd7pgWCdA5nIr3nRe3w.OhuQbhUXHCV0OI08ks6z.mRBN5ySETfu",
+    "created_at": "2026-07-19T04:21:05.239Z"
+  }
 ]

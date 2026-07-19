@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HiddenFeel · AI Insight</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
 
@@ -19,24 +19,27 @@
     </div>
 
     <div class="card">
-        <div class="card-title">✦ Refleksi Mingguan AI</div>
-        <div id="weeklyInsight" style="margin-top:12px;">
-            <div class="insight-placeholder">Tekan tombol untuk mendapat analisa dari AI tentang pola emosimu minggu ini.</div>
-            <button class="btn-save" id="weeklyInsightBtn" style="margin-top:14px;">🔍 Analisa Minggu Ini</button>
+        <div class="card-title">✦ Analisis AI</div>
+        <div style="margin-top: 12px;">
+            <p style="color: var(--text2); font-size: 0.85rem; margin-bottom: 12px;">
+                AI akan menganalisis catatanmu dan memberikan wawasan tentang pola emosimu.
+            </p>
+            <button class="btn-save" id="analyzeBtn">🔍 Analisis Semua Catatan</button>
         </div>
+        <div id="insightResult" style="margin-top: 16px; display: none;"></div>
     </div>
 
     <div class="card">
         <div class="card-title">💬 Kutipan Hari Ini</div>
-        <div id="quoteContent" style="margin-top:12px;">
-            <div class="insight-loading"><span>Memuat kutipan…</span><div class="dot-pulse"><span></span><span></span><span></span></div></div>
+        <div id="quoteContent" style="margin-top: 12px;">
+            <div class="insight-loading"><span>Memuat kutipan…</span></div>
         </div>
     </div>
 
     <div class="card">
         <div class="card-title">🎯 Saran untuk Besok</div>
-        <div id="tipContent" style="margin-top:12px;">
-            <div class="insight-loading"><span>Memuat saran…</span><div class="dot-pulse"><span></span><span></span><span></span></div></div>
+        <div id="tipContent" style="margin-top: 12px;">
+            <div class="insight-loading"><span>Memuat saran…</span></div>
         </div>
     </div>
 
@@ -61,15 +64,255 @@
     </a>
 </nav>
 
-<script src="js/common.js"></script>
 <script>
-// Check authentication before loading page
-(async function() {
-    const isAuthed = await checkAuth();
-    if (!isAuthed) return;
-    addLogoutButton();
-})();
+// ============ CONFIG ============
+const API_BASE = 'http://localhost:3000/api';
+const QUOTES = [
+    { text: "Kebahagiaan bukanlah tujuan, tetapi cara hidup.", author: "— Dalai Lama" },
+    { text: "Rasa sakit itu nyata, tapi itu tidak akan bertahan selamanya.", author: "— Anonim" },
+    { text: "Kamu lebih kuat dari yang kamu kira.", author: "— Anonim" },
+    { text: "Setiap hari adalah kesempatan baru untuk memulai.", author: "— Anonim" },
+    { text: "Kesehatan mental adalah bagian dari kesehatan secara keseluruhan.", author: "— WHO" },
+    { text: "Jangan biarkan masa lalu mencuri masa depanmu.", author: "— Anonim" },
+    { text: "Kamu berhak untuk merasa bahagia.", author: "— Anonim" },
+    { text: "Kesalahan adalah bukti bahwa kamu sedang mencoba.", author: "— Anonim" }
+];
+
+const TIPS = [
+    "Coba luangkan 5 menit untuk bernapas dalam-dalam dan menenangkan pikiran.",
+    "Tulis 3 hal yang kamu syukuri hari ini, sekecil apapun itu.",
+    "Ingatkan dirimu bahwa kamu sudah cukup baik.",
+    "Lakukan satu hal kecil yang membuatmu tersenyum.",
+    "Jika merasa cemas, coba fokus pada pernapasanmu.",
+    "Istirahatlah jika kamu merasa lelah secara mental.",
+    "Bicara dengan orang yang kamu percaya tentang perasaanmu.",
+    "Jangan bandingkan dirimu dengan orang lain. Kamu unik."
+];
+
+// ============ AUTH ============
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+}
+
+async function checkAuth() {
+    const token = getToken();
+    if (!token) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+// ============ API ============
+async function apiFetch(endpoint, options = {}) {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+    };
+    
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers
+    });
+    
+    if (response.status === 401) {
+        logout();
+        throw new Error('Sesi habis');
+    }
+    
+    return response.json();
+}
+
+async function fetchEntries() {
+    return await apiFetch('/entries');
+}
+
+async function analyzeText(text) {
+    return await apiFetch('/ai/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ text })
+    });
+}
+
+// ============ THEME ============
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+        themeBtn.textContent = document.documentElement.hasAttribute('data-theme') ? '☀️' : '🌙';
+        themeBtn.addEventListener('click', () => {
+            document.documentElement.toggleAttribute('data-theme');
+            const isDark = document.documentElement.hasAttribute('data-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            themeBtn.textContent = isDark ? '☀️' : '🌙';
+        });
+    }
+}
+
+// ============ QUOTES & TIPS ============
+function loadQuote() {
+    const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+    document.getElementById('quoteContent').innerHTML = `
+        <div class="quote-box">
+            "${quote.text}"
+            <div class="quote-author">${quote.author}</div>
+        </div>
+    `;
+}
+
+function loadTip() {
+    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    document.getElementById('tipContent').innerHTML = `
+        <div style="padding: 12px; background: var(--bg3); border-radius: 12px; font-size: 0.9rem; line-height: 1.6;">
+            💡 ${tip}
+        </div>
+    `;
+}
+
+// ============ ANALYZE ============
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('analyzeBtn');
+    const resultDiv = document.getElementById('insightResult');
+    
+    btn.textContent = '⏳ Menganalisis...';
+    btn.disabled = true;
+    resultDiv.style.display = 'none';
+    
+    try {
+        const entries = await fetchEntries();
+        
+        if (entries.length === 0) {
+            resultDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: var(--text2);">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
+                    <p>Belum ada catatan untuk dianalisis.</p>
+                    <p style="font-size: 0.8rem;">Tulis beberapa perasaan dulu di halaman Hari Ini.</p>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            return;
+        }
+        
+        // Analyze last 5 entries
+        const recentEntries = entries.slice(0, 5);
+        const texts = recentEntries.map(e => e.feeling_text || e.note || '').filter(t => t.length > 0);
+        
+        if (texts.length === 0) {
+            resultDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: var(--text2);">
+                    <p>Tidak ada teks yang bisa dianalisis.</p>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            return;
+        }
+        
+        // Analyze each text
+        const results = [];
+        for (const text of texts) {
+            const result = await analyzeText(text);
+            results.push(result);
+        }
+        
+        // Calculate average sentiment
+        const avgScore = results.reduce((sum, r) => sum + r.sentiment_score, 0) / results.length;
+        const labels = results.map(r => r.label);
+        const mostCommonLabel = labels.reduce((a, b) => 
+            labels.filter(v => v === a).length >= labels.filter(v => v === b).length ? a : b
+        );
+        
+        resultDiv.innerHTML = `
+            <div style="background: var(--bg3); border-radius: 16px; padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="font-size: 2rem;">${avgScore > 0.6 ? '😊' : avgScore > 0.3 ? '😐' : '😢'}</span>
+                    <div>
+                        <div style="font-weight: 600; font-size: 1.1rem;">
+                            ${avgScore > 0.6 ? 'Mood cenderung positif' : avgScore > 0.3 ? 'Mood netral' : 'Mood cenderung negatif'}
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text2);">
+                            Rata-rata sentimen: ${(avgScore * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text2); border-top: 1px solid var(--border); padding-top: 12px;">
+                    <div>📊 Dari ${texts.length} catatan terakhir:</div>
+                    <div style="margin-top: 4px;">Mood yang paling sering muncul: <strong>${mostCommonLabel}</strong></div>
+                    <div style="margin-top: 4px;">${results.map(r => r.emoji).join(' ')}</div>
+                </div>
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+        
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div style="color: #c0392b; padding: 12px; background: #fee; border-radius: 12px;">
+                ❌ Gagal menganalisis: ${error.message}
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    }
+    
+    btn.textContent = '🔍 Analisis Semua Catatan';
+    btn.disabled = false;
+});
+
+// ============ STREAK ============
+async function updateStreak() {
+    try {
+        const entries = await fetchEntries();
+        const streak = calcStreak(entries);
+        document.getElementById('streakVal').textContent = streak;
+    } catch (error) {
+        console.error('Failed to load streak:', error);
+    }
+}
+
+function calcStreak(entries) {
+    if (!entries || entries.length === 0) return 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const entryDates = new Set();
+    entries.forEach(e => {
+        const date = new Date(e.created_at);
+        date.setHours(0, 0, 0, 0);
+        entryDates.add(date.getTime());
+    });
+    
+    let streak = 0;
+    let checkDate = new Date(today);
+    
+    while (entryDates.has(checkDate.getTime())) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+    }
+    
+    return streak;
+}
+
+// ============ INIT ============
+async function init() {
+    if (!await checkAuth()) return;
+    initTheme();
+    loadQuote();
+    loadTip();
+    await updateStreak();
+}
+
+init();
 </script>
-<script src="js/insight.js"></script>
 </body>
 </html>

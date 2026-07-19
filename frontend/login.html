@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HiddenFeel · Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
     <style>
         .auth-container {
             min-height: 100vh;
@@ -13,6 +13,7 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            background: var(--bg);
         }
         .auth-card {
             max-width: 380px;
@@ -76,6 +77,10 @@
             cursor: pointer;
             margin-top: 8px;
         }
+        .btn-auth:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(212,130,90,0.4);
+        }
         .auth-footer {
             text-align: center;
             margin-top: 24px;
@@ -119,8 +124,8 @@
         
         <form id="loginForm">
             <div class="input-group">
-                <label>Username</label>
-                <input type="text" id="username" placeholder="Masukkan username" required>
+                <label>Email</label>
+                <input type="email" id="email" placeholder="Masukkan email" required>
             </div>
             <div class="input-group">
                 <label>Password</label>
@@ -136,12 +141,12 @@
 </div>
 
 <script>
-const API_BASE = '/hiddenfeel/backend';
+const API_BASE = 'http://localhost:3000/api';
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     
     const errorDiv = document.getElementById('errorMsg');
@@ -151,30 +156,28 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     successDiv.style.display = 'none';
     
     try {
-        const response = await fetch(`${API_BASE}/auth`, {
+        const response = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'login',
-                username: username,
-                password: password
-            })
+            body: JSON.stringify({ email, password })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            successDiv.textContent = data.message;
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            successDiv.textContent = 'Login berhasil!';
             successDiv.style.display = 'block';
             setTimeout(() => {
                 window.location.href = 'today.html';
             }, 1000);
         } else {
-            errorDiv.textContent = data.message;
+            errorDiv.textContent = data.error || 'Login gagal';
             errorDiv.style.display = 'block';
         }
     } catch (error) {
-        errorDiv.textContent = 'Gagal terhubung ke server';
+        errorDiv.textContent = 'Gagal terhubung ke server. Pastikan server berjalan di port 3000';
         errorDiv.style.display = 'block';
     }
 });
