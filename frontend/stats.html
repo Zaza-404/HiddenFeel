@@ -6,7 +6,182 @@
     <title>HiddenFeel · Statistik</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .stat-box {
+            background: var(--bg3);
+            border-radius: 16px;
+            padding: 16px 12px;
+            text-align: center;
+        }
+        .stat-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+        .chart-container {
+            margin-top: 16px;
+            padding: 8px 0;
+            overflow: hidden;
+        }
+        .bar-chart {
+            display: flex;
+            gap: 8px;
+            height: 140px;
+            align-items: flex-end;
+            padding: 4px 0;
+        }
+        .bar-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .bar-fill {
+            width: 100%;
+            max-width: 32px;
+            border-radius: 6px 6px 0 0;
+            transition: height 0.6s ease;
+            min-height: 4px;
+        }
+        .bar-label {
+            font-size: 0.55rem;
+            color: var(--text2);
+            text-align: center;
+            margin-top: 2px;
+            font-weight: 600;
+        }
+        .bar-value {
+            font-size: 0.5rem;
+            color: var(--text2);
+            opacity: 0.6;
+        }
+        .mood-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .mood-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .mood-emoji {
+            font-size: 1.4rem;
+            width: 36px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .mood-bar-track {
+            flex: 1;
+            height: 20px;
+            background: var(--bg3);
+            border-radius: 50px;
+            overflow: hidden;
+            position: relative;
+        }
+        .mood-bar-fill {
+            height: 100%;
+            border-radius: 50px;
+            transition: width 0.8s ease;
+        }
+        .mood-count {
+            font-size: 0.75rem;
+            color: var(--text2);
+            min-width: 60px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .entry-item-mini {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .entry-item-mini:last-child {
+            border-bottom: none;
+        }
+        .entry-emoji-mini {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+        .entry-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .entry-mood-name {
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .entry-date {
+            font-size: 0.6rem;
+            color: var(--text2);
+            flex-shrink: 0;
+        }
+        .entry-text {
+            font-size: 0.75rem;
+            color: var(--text2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text2);
+        }
+        .empty-state .icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+        .empty-state .text {
+            font-size: 0.85rem;
+        }
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            .stat-number {
+                font-size: 1.5rem;
+            }
+            .bar-chart {
+                height: 100px;
+                gap: 4px;
+            }
+            .mood-emoji {
+                font-size: 1.1rem;
+                width: 28px;
+            }
+            .mood-count {
+                min-width: 40px;
+                font-size: 0.65rem;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -21,30 +196,50 @@
 
     <div class="card">
         <div class="card-title">📊 Ringkasan</div>
-        <div class="stats-row" style="margin-top:14px;">
-            <div class="stat-card">
-                <div class="stat-num" id="statTotal">0</div>
-                <div class="stat-lbl">Total Entri</div>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-number" id="statTotal">0</div>
+                <div class="stat-label">Total Entri</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-num" id="statAvg">0</div>
-                <div class="stat-lbl">Rata‑rata Mood</div>
+            <div class="stat-box">
+                <div class="stat-number" id="statAvg">0</div>
+                <div class="stat-label">Rata‑rata Mood</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-num" id="statStreak">0</div>
-                <div class="stat-lbl">Streak Hari</div>
+            <div class="stat-box">
+                <div class="stat-number" id="statStreak">0</div>
+                <div class="stat-label">Streak</div>
             </div>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-title">📈 Tren 7 Hari</div>
-        <canvas id="trendChart" height="200"></canvas>
+        <div class="card-title">📈 Tren 7 Hari Terakhir</div>
+        <div class="chart-container" id="trendContainer">
+            <div class="empty-state">
+                <div class="icon">📊</div>
+                <div class="text">Memuat data...</div>
+            </div>
+        </div>
     </div>
 
     <div class="card">
         <div class="card-title">🥧 Distribusi Mood</div>
-        <canvas id="moodChart" height="200"></canvas>
+        <div id="moodContainer">
+            <div class="empty-state">
+                <div class="icon">📊</div>
+                <div class="text">Memuat data...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📝 Entri Terbaru</div>
+        <div id="recentEntries">
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <div class="text">Belum ada entri</div>
+            </div>
+        </div>
     </div>
 
     <footer>Bukan alat diagnosis medis. Jaga kesehatan mentalmu 💚</footer>
@@ -111,15 +306,40 @@ async function apiFetch(endpoint, options = {}) {
         throw new Error('Sesi habis');
     }
     
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Terjadi kesalahan');
+    }
+    
     return response.json();
+}
+
+async function fetchEntries() {
+    return await apiFetch('/entries');
 }
 
 async function getStats() {
     return await apiFetch('/stats');
 }
 
-async function fetchEntries() {
-    return await apiFetch('/entries');
+// ============ THEME ============
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+        themeBtn.textContent = document.documentElement.hasAttribute('data-theme') ? '☀️' : '🌙';
+        themeBtn.addEventListener('click', () => {
+            document.documentElement.toggleAttribute('data-theme');
+            const isDark = document.documentElement.hasAttribute('data-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            themeBtn.textContent = isDark ? '☀️' : '🌙';
+            loadStats();
+        });
+    }
 }
 
 // ============ UTILITIES ============
@@ -131,9 +351,11 @@ function calcStreak(entries) {
     
     const entryDates = new Set();
     entries.forEach(e => {
-        const date = new Date(e.created_at);
-        date.setHours(0, 0, 0, 0);
-        entryDates.add(date.getTime());
+        if (e.created_at) {
+            const date = new Date(e.created_at);
+            date.setHours(0, 0, 0, 0);
+            entryDates.add(date.getTime());
+        }
     });
     
     let streak = 0;
@@ -158,141 +380,214 @@ function getMoodValue(emoji) {
     return map[emoji] || 3;
 }
 
-// ============ THEME ============
-function initTheme() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
+function getMoodName(value) {
+    const map = {
+        5: 'Bahagia',
+        4: 'Tenang',
+        3: 'Biasa',
+        2: 'Sedih',
+        1: 'Marah'
+    };
+    return map[value] || 'Biasa';
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+// ============ RENDER FUNCTIONS ============
+
+function renderTrendChart(dailyData) {
+    const container = document.getElementById('trendContainer');
     
-    const themeBtn = document.getElementById('themeToggle');
-    if (themeBtn) {
-        themeBtn.textContent = document.documentElement.hasAttribute('data-theme') ? '☀️' : '🌙';
-        themeBtn.addEventListener('click', () => {
-            document.documentElement.toggleAttribute('data-theme');
-            const isDark = document.documentElement.hasAttribute('data-theme');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            themeBtn.textContent = isDark ? '☀️' : '🌙';
+    if (!dailyData || dailyData.length === 0 || dailyData.every(d => d.value === 0)) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <div class="text">Belum ada data 7 hari terakhir</div>
+            </div>
+        `;
+        return;
+    }
+
+    // ==== FIX: Urutkan data berdasarkan tanggal ====
+    const sortedData = [...dailyData].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // ==== FIX: Ambil 7 hari terakhir ====
+    const last7Days = sortedData.slice(-7);
+    
+    const maxVal = Math.max(...last7Days.map(d => d.value), 1);
+    const isDark = document.documentElement.hasAttribute('data-theme');
+    const barColor = isDark ? '#d4825a' : '#d4825a';
+    const bgColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    
+    // ==== FIX: Nama hari yang benar (Senin - Minggu) ====
+    const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    
+    // ==== FIX: Cari hari Senin terakhir ====
+    const today = new Date();
+    const todayDay = today.getDay(); // 0=Minggu, 1=Senin, ...
+    const daysToMonday = todayDay === 0 ? 6 : todayDay - 1;
+    const lastMonday = new Date(today);
+    lastMonday.setDate(today.getDate() - daysToMonday);
+    
+    // ==== FIX: Buat array 7 hari dari Senin - Minggu ====
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(lastMonday);
+        date.setDate(lastMonday.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        const existing = last7Days.find(d => d.date === dateStr);
+        weekDays.push({
+            date: dateStr,
+            value: existing ? existing.value : 0,
+            label: dayNames[i]
         });
     }
+    
+    let html = `<div class="bar-chart">`;
+    
+    weekDays.forEach(day => {
+        const height = Math.max((day.value / maxVal) * 100, day.value > 0 ? 8 : 0);
+        const isToday = day.date === today.toISOString().split('T')[0];
+        
+        html += `
+            <div class="bar-item">
+                <div class="bar-fill" style="height:${height}%; background:${day.value > 0 ? barColor : bgColor}; max-width:32px; ${isToday ? 'border:2px solid var(--accent);' : ''}"></div>
+                <div class="bar-value">${day.value}</div>
+                <div class="bar-label" style="${isToday ? 'color:var(--accent);' : ''}">${day.label}</div>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    container.innerHTML = html;
 }
 
-// ============ CHARTS ============
-let trendChart = null;
-let moodChart = null;
+function renderMoodDistribution(moodCount) {
+    const container = document.getElementById('moodContainer');
+    
+    if (!moodCount || Object.keys(moodCount).length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <div class="text">Belum ada data mood</div>
+            </div>
+        `;
+        return;
+    }
 
-function getChartColors() {
-    const isDark = document.documentElement.hasAttribute('data-theme');
-    return {
-        text: isDark ? '#f0e6dc' : '#2c2016',
-        grid: isDark ? '#3a2e24' : '#e8ddd0'
+    const moodColors = {
+        '😊': '#7cb342',
+        '😌': '#66bb6a',
+        '😐': '#ffa726',
+        '😢': '#42a5f5',
+        '😡': '#ef5350'
     };
+
+    const total = Object.values(moodCount).reduce((a, b) => a + b, 0);
+    const isDark = document.documentElement.hasAttribute('data-theme');
+    const trackColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    
+    let html = `<div class="mood-list">`;
+    
+    const sorted = Object.entries(moodCount).sort((a, b) => b[1] - a[1]);
+    
+    sorted.forEach(([mood, count]) => {
+        const percentage = (count / total) * 100;
+        const color = moodColors[mood] || '#c0b898';
+        
+        html += `
+            <div class="mood-row">
+                <span class="mood-emoji">${mood}</span>
+                <div class="mood-bar-track" style="background:${trackColor};">
+                    <div class="mood-bar-fill" style="width:${percentage}%; background:${color};"></div>
+                </div>
+                <span class="mood-count">${count} (${percentage.toFixed(0)}%)</span>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    container.innerHTML = html;
 }
 
-function renderTrendChart(data) {
-    const ctx = document.getElementById('trendChart').getContext('2d');
-    const colors = getChartColors();
+function renderRecentEntries(entries) {
+    const container = document.getElementById('recentEntries');
     
-    if (trendChart) trendChart.destroy();
-    
-    const labels = data.map(d => {
-        const date = new Date(d.date);
-        return date.toLocaleDateString('id-ID', { weekday: 'short' });
-    });
-    
-    const values = data.map(d => d.value || 0);
-    
-    trendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Mood',
-                data: values,
-                borderColor: '#d4825a',
-                backgroundColor: 'rgba(212,130,90,0.1)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: {
-                    min: 0,
-                    max: 6,
-                    ticks: { color: colors.text }
-                },
-                x: {
-                    ticks: { color: colors.text }
-                }
-            }
-        }
-    });
-}
+    if (!entries || entries.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <div class="text">Belum ada entri</div>
+            </div>
+        `;
+        return;
+    }
 
-function renderMoodChart(data) {
-    const ctx = document.getElementById('moodChart').getContext('2d');
-    const colors = getChartColors();
+    const recent = entries.slice(0, 5);
+    let html = '';
     
-    if (moodChart) moodChart.destroy();
-    
-    const moodEmojis = ['😊', '😌', '😐', '😢', '😡'];
-    const moodNames = ['Bahagia', 'Tenang', 'Biasa', 'Sedih', 'Marah'];
-    const moodColors = ['#a8c96a', '#a8c5a0', '#c0b898', '#d0a070', '#c08080'];
-    
-    const values = moodEmojis.map(emoji => data[emoji] || 0);
-    
-    moodChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: moodNames.map((name, i) => `${moodEmojis[i]} ${name}`),
-            datasets: [{
-                data: values,
-                backgroundColor: moodColors,
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: colors.text, padding: 15 }
-                }
-            }
-        }
+    recent.forEach(entry => {
+        const moodValue = getMoodValue(entry.mood);
+        const moodName = getMoodName(moodValue);
+        const text = entry.feeling_text || entry.note || 'Tidak ada catatan';
+        
+        html += `
+            <div class="entry-item-mini">
+                <span class="entry-emoji-mini">${entry.mood || '😐'}</span>
+                <div class="entry-content">
+                    <div class="entry-header">
+                        <span class="entry-mood-name">${moodName}</span>
+                        <span class="entry-date">${formatDate(entry.created_at)}</span>
+                    </div>
+                    <div class="entry-text">${text}</div>
+                </div>
+            </div>
+        `;
     });
+    
+    container.innerHTML = html;
 }
 
 // ============ LOAD DATA ============
 async function loadStats() {
     try {
-        const stats = await getStats();
-        const entries = await fetchEntries();
-        const streak = calcStreak(entries);
+        const [entries, stats] = await Promise.all([
+            fetchEntries(),
+            getStats()
+        ]);
         
-        document.getElementById('statTotal').textContent = stats.total || 0;
+        console.log('📊 Entries:', entries.length);
+        console.log('📊 Stats:', stats);
+        
+        const streak = calcStreak(entries);
+        document.getElementById('streakVal').textContent = streak;
+        
+        document.getElementById('statTotal').textContent = entries.length;
         document.getElementById('statAvg').textContent = stats.avg_sentiment ? 
             (stats.avg_sentiment * 5).toFixed(1) : '0';
         document.getElementById('statStreak').textContent = streak;
-        document.getElementById('streakVal').textContent = streak;
         
-        // Prepare trend data
-        const trendData = stats.daily_stats || [];
-        renderTrendChart(trendData);
-        
-        // Prepare mood distribution
-        const moodCount = stats.mood_count || {};
-        renderMoodChart(moodCount);
+        const dailyData = stats.daily_stats || [];
+        renderTrendChart(dailyData);
+        renderMoodDistribution(stats.mood_count || {});
+        renderRecentEntries(entries);
         
     } catch (error) {
-        console.error('Failed to load stats:', error);
+        console.error('❌ Failed to load stats:', error);
+        document.getElementById('trendContainer').innerHTML = `
+            <div class="empty-state">
+                <div class="icon">❌</div>
+                <div class="text">Gagal memuat data: ${error.message}</div>
+            </div>
+        `;
     }
 }
 
