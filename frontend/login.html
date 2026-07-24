@@ -6,6 +6,7 @@
     <title>HiddenFeel · Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="/assets/js/theme.js"></script>
     <style>
         .auth-container {
             min-height: 100vh;
@@ -116,7 +117,10 @@
 
 <div class="auth-container">
     <div class="auth-card">
-        <div class="auth-logo">Hidden<span>Feel</span></div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="auth-logo">Hidden<span>Feel</span></div>
+            <button class="theme-btn" id="themeToggle" title="Ganti tema">🌙</button>
+        </div>
         <div class="auth-sub">Jurnal emosi pribadimu</div>
         
         <div id="errorMsg" class="error-msg"></div>

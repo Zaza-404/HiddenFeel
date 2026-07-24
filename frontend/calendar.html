@@ -6,6 +6,7 @@
     <title>HiddenFeel · Kalender Mood</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="/assets/js/theme.js"></script>
 </head>
 <body>
 
@@ -166,25 +167,6 @@ function getMoodName(value) {
     return map[value] || 'Biasa';
 }
 
-// ============ THEME ============
-function initTheme() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
-    
-    const themeBtn = document.getElementById('themeToggle');
-    if (themeBtn) {
-        themeBtn.textContent = document.documentElement.hasAttribute('data-theme') ? '☀️' : '🌙';
-        themeBtn.addEventListener('click', () => {
-            document.documentElement.toggleAttribute('data-theme');
-            const isDark = document.documentElement.hasAttribute('data-theme');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            themeBtn.textContent = isDark ? '☀️' : '🌙';
-        });
-    }
-}
-
 // ============ RENDER ============
 function renderCalendar() {
     const year = currentDate.getFullYear();
@@ -333,7 +315,6 @@ function calcStreak(entries) {
 // ============ INIT ============
 async function init() {
     if (!await checkAuth()) return;
-    initTheme();
     
     try {
         entriesData = await fetchEntries();

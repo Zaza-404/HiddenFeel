@@ -6,6 +6,7 @@
     <title>HiddenFeel · Hari Ini</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="/assets/js/theme.js"></script>
 </head>
 <body>
 
@@ -220,13 +221,6 @@ async function init() {
     const valDisplay = document.getElementById('intensityVal');
     slider.addEventListener('input', () => {
         valDisplay.textContent = slider.value;
-    });
-    
-    // Theme toggle
-    const themeBtn = document.getElementById('themeToggle');
-    themeBtn.addEventListener('click', () => {
-        document.documentElement.toggleAttribute('data-theme');
-        themeBtn.textContent = document.documentElement.hasAttribute('data-theme') ? '☀️' : '🌙';
     });
     
     // Save button
